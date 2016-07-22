@@ -1,6 +1,7 @@
-QJ = require 'qj'
-
 defaultFormat = /(\d{1,4})/g
+
+trim = (el) ->
+    return el.toString().replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
 
 cards = [
   {
@@ -123,245 +124,6 @@ luhnCheck = (num) ->
 
   sum % 10 == 0
 
-hasTextSelected = (target) ->
-  try
-    # If some text is selected
-    return true if target.selectionStart? and
-      target.selectionStart isnt target.selectionEnd
-
-    # If some text is selected in IE
-    if document?.selection?.createRange?
-      return true if document.selection.createRange().text
-  catch e
-
-  false
-
-# Private
-
-# Format Card Number
-
-reFormatCardNumber = (e) ->
-  setTimeout =>
-    target = e.target
-    value   = QJ.val(target)
-    value   = Payment.fns.formatCardNumber(value)
-    QJ.val(target, value)
-    QJ.trigger(target, 'change')
-
-formatCardNumber = (e) ->
-  # Only format if input is a number
-  digit = String.fromCharCode(e.which)
-  return unless /^\d+$/.test(digit)
-
-  target = e.target
-  value   = QJ.val(target)
-  card    = cardFromNumber(value + digit)
-  length  = (value.replace(/\D/g, '') + digit).length
-
-  upperLength = 16
-  upperLength = card.length[card.length.length - 1] if card
-  return if length >= upperLength
-
-  # Return if focus isn't at the end of the text
-  return if hasTextSelected(target)
-
-  if card && card.type is 'amex'
-    # Amex cards are formatted differently
-    re = /^(\d{4}|\d{4}\s\d{6})$/
-  else
-    re = /(?:^|\s)(\d{4})$/
-
-  # If '4242' + 4
-  if re.test(value)
-    e.preventDefault()
-    QJ.val(target, value + ' ' + digit)
-    QJ.trigger(target, 'change')
-
-  # If '424' + 2
-  else if re.test(value + digit)
-    e.preventDefault()
-    QJ.val(target, value + digit + ' ')
-    QJ.trigger(target, 'change')
-
-formatBackCardNumber = (e) ->
-  target = e.target
-  value   = QJ.val(target)
-
-  return if e.meta
-
-  # Return unless backspacing
-  return unless e.which is 8
-
-  # Return if focus isn't at the end of the text
-  return if hasTextSelected(target)
-
-  # Remove the trailing space
-  if /\d\s$/.test(value)
-    e.preventDefault()
-    QJ.val(target, value.replace(/\d\s$/, ''))
-  else if /\s\d?$/.test(value)
-    e.preventDefault()
-    QJ.val(target, value.replace(/\s\d?$/, ''))
-
-# Format Expiry
-
-formatExpiry = (e) ->
-  # Only format if input is a number
-  digit = String.fromCharCode(e.which)
-  return unless /^\d+$/.test(digit)
-
-  target = e.target
-  val     = QJ.val(target) + digit
-
-  if /^\d$/.test(val) and val not in ['0', '1']
-    e.preventDefault()
-    QJ.val(target, "0#{val} / ")
-
-  else if /^\d\d$/.test(val)
-    e.preventDefault()
-    QJ.val(target, "#{val} / ")
-
-formatMonthExpiry = (e) ->
-  digit = String.fromCharCode(e.which)
-  return unless /^\d+$/.test(digit)
-
-  target = e.target
-  val     = QJ.val(target) + digit
-
-  if /^\d$/.test(val) and val not in ['0', '1']
-    e.preventDefault()
-    QJ.val(target, "0#{val}")
-
-  else if /^\d\d$/.test(val)
-    e.preventDefault()
-    QJ.val(target, "#{val}")
-
-formatForwardExpiry = (e) ->
-  digit = String.fromCharCode(e.which)
-  return unless /^\d+$/.test(digit)
-
-  target = e.target
-  val     = QJ.val(target)
-
-  if /^\d\d$/.test(val)
-    QJ.val(target, "#{val} / ")
-
-formatForwardSlash = (e) ->
-  slash = String.fromCharCode(e.which)
-  return unless slash is '/'
-
-  target = e.target
-  val     = QJ.val(target)
-
-  if /^\d$/.test(val) and val isnt '0'
-    QJ.val(target, "0#{val} / ")
-
-formatBackExpiry = (e) ->
-  # If shift+backspace is pressed
-  return if e.metaKey
-
-  target = e.target
-  value   = QJ.val(target)
-
-  # Return unless backspacing
-  return unless e.which is 8
-
-  # Return if focus isn't at the end of the text
-  return if hasTextSelected(target)
-
-  # Remove the trailing space
-  if /\d(\s|\/)+$/.test(value)
-    e.preventDefault()
-    QJ.val(target, value.replace(/\d(\s|\/)*$/, ''))
-  else if /\s\/\s?\d?$/.test(value)
-    e.preventDefault()
-    QJ.val(target, value.replace(/\s\/\s?\d?$/, ''))
-
-#  Restrictions
-
-restrictNumeric = (e) ->
-  # Key event is for a browser shortcut
-  return true if e.metaKey or e.ctrlKey
-
-  # If keycode is a space
-  return e.preventDefault() if e.which is 32
-
-  # If keycode is a special char (WebKit)
-  return true if e.which is 0
-
-  # If char is a special char (Firefox)
-  return true if e.which < 33
-
-  input = String.fromCharCode(e.which)
-
-  # Char is a number or a space
-  return e.preventDefault() if !/[\d\s]/.test(input)
-
-restrictCardNumber = (e) ->
-  target = e.target
-  digit   = String.fromCharCode(e.which)
-  return unless /^\d+$/.test(digit)
-
-  return if hasTextSelected(target)
-
-  # Restrict number of digits
-  value = (QJ.val(target) + digit).replace(/\D/g, '')
-  card  = cardFromNumber(value)
-
-  if card
-    e.preventDefault() unless value.length <= card.length[card.length.length - 1]
-  else
-    # All other cards are 16 digits long
-    e.preventDefault() unless value.length <= 16
-
-restrictExpiry = (e, length) ->
-  target = e.target
-  digit   = String.fromCharCode(e.which)
-  return unless /^\d+$/.test(digit)
-
-  return if hasTextSelected(target)
-
-  value = QJ.val(target) + digit
-  value = value.replace(/\D/g, '')
-
-  return e.preventDefault() if value.length > length
-
-restrictCombinedExpiry = (e) ->
-  return restrictExpiry e, 6
-
-restrictMonthExpiry = (e) ->
-  return restrictExpiry e, 2
-
-restrictYearExpiry = (e) ->
-  return restrictExpiry e, 4
-
-restrictCVC = (e) ->
-  target = e.target
-  digit   = String.fromCharCode(e.which)
-  return unless /^\d+$/.test(digit)
-
-  return if hasTextSelected(target)
-
-  val     = QJ.val(target) + digit
-  return e.preventDefault() unless val.length <= 4
-
-setCardType = (e) ->
-  target  = e.target
-  val      = QJ.val(target)
-  cardType = Payment.fns.cardType(val) or 'unknown'
-
-  unless QJ.hasClass(target, cardType)
-    allTypes = (card.type for card in cards)
-
-    QJ.removeClass target, 'unknown'
-    QJ.removeClass target, allTypes.join(' ')
-
-    QJ.addClass target, cardType
-    QJ.toggleClass target, 'identified', cardType isnt 'unknown'
-    QJ.trigger target, 'payment.cardType', cardType
-
-# Public
-
 class Payment
   @fns:
     cardExpiryVal: (value) ->
@@ -394,8 +156,8 @@ class Payment
 
       return false unless month and year
 
-      month = QJ.trim(month)
-      year  = QJ.trim(year)
+      month = trim(month)
+      year  = trim(year)
 
       return false unless /^\d+$/.test(month)
       return false unless /^\d+$/.test(year)
@@ -422,7 +184,7 @@ class Payment
 
       expiry > currentTime
     validateCardCVC: (cvc, type) ->
-      cvc = QJ.trim(cvc)
+      cvc = trim(cvc)
       return false unless /^\d+$/.test(cvc)
 
       if type and cardFromType(type)
@@ -449,38 +211,6 @@ class Payment
         groups = card.format.exec(num)
         groups?.shift()
         groups?.join(' ')
-  @restrictNumeric: (el) ->
-    QJ.on el, 'keypress', restrictNumeric
-  @cardExpiryVal: (el) ->
-    Payment.fns.cardExpiryVal(QJ.val(el))
-  @formatCardCVC: (el) ->
-    Payment.restrictNumeric el
-    QJ.on el, 'keypress', restrictCVC
-    el
-  @formatCardExpiry: (el) ->
-    Payment.restrictNumeric el
-    if el.length && el.length == 2
-      [month, year] = el
-      @formatCardExpiryMultiple month, year
-    else
-      QJ.on el, 'keypress', restrictCombinedExpiry
-      QJ.on el, 'keypress', formatExpiry
-      QJ.on el, 'keypress', formatForwardSlash
-      QJ.on el, 'keypress', formatForwardExpiry
-      QJ.on el, 'keydown', formatBackExpiry
-    el
-  @formatCardExpiryMultiple: (month, year) ->
-    QJ.on month, 'keypress', restrictMonthExpiry
-    QJ.on month, 'keypress', formatMonthExpiry
-    QJ.on year, 'keypress', restrictYearExpiry
-  @formatCardNumber: (el) ->
-    Payment.restrictNumeric el
-    QJ.on el, 'keypress', restrictCardNumber
-    QJ.on el, 'keypress', formatCardNumber
-    QJ.on el, 'keydown', formatBackCardNumber
-    QJ.on el, 'keyup', setCardType
-    QJ.on el, 'paste', reFormatCardNumber
-    el
   @getCardArray: -> return cards
   @setCardArray: (cardArray) ->
     cards = cardArray
@@ -494,4 +224,3 @@ class Payment
     return true
 
 module.exports = Payment
-global.Payment = Payment

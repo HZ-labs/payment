@@ -21,6 +21,7 @@
     "preversion": "npm run test",
     "prepublish": "NODE_ENV=production npm run compile",
     "postpublish": "git push origin master && git push --tags",
+    "tz": "karma start --single-run",
     "test": "karma start --single-run --browsers PhantomJS"
   },
   "devDependencies": {
@@ -49,7 +50,5 @@
     "vinyl-source-stream": "~1.1.0",
     "webpack": "^1.13.1"
   },
-  "dependencies": {
-    "qj": "~2.0.0"
-  }
+  "dependencies": {}
 }
