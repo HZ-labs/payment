@@ -1,7 +1,7 @@
 defaultFormat = /(\d{1,4})/g
 
 trim = (el) ->
-    return el.toString().replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+    return el.toString().replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '')
 
 cards = [
   {
@@ -224,3 +224,4 @@ class Payment
     return true
 
 module.exports = Payment
+global.Payment = Payment

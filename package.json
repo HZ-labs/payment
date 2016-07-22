@@ -13,7 +13,7 @@
     "type": "git",
     "url": "https://github.com/jessepollak/payment.git"
   },
-  "main": "lib/index.js",
+  "main": "dist/payment.js",
   "scripts": {
     "compile": "coffee -o lib/ --compile ./src/*.coffee",
     "build": "NODE_ENV=production webpack",
@@ -28,7 +28,6 @@
     "browserify": "~13.0.1",
     "coffee-loader": "^0.7.2",
     "coffee-script": "~1.10",
-    "jsdom": "~9.2",
     "json-loader": "^0.5.4",
     "karma": "^0.13.22",
     "karma-chai": "^0.1.0",
